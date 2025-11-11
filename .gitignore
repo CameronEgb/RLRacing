@@ -1,0 +1,12 @@
+# Default ignored files
+/shelf/
+/workspace.xml
+
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+
+# Ignore zip models
+*.zip
+models/*.zip
