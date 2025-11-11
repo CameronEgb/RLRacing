@@ -1,172 +1,186 @@
-# Low-Poly Racing Game
+# Reinforced Racing: Low-Poly Racing Game with RL Opponents
 
-A top-down racing game with procedurally generated tracks, realistic physics, and a chill low-poly aesthetic.
+A top-down racing game with procedurally generated tracks, realistic physics, a chill low-poly aesthetic, and reinforcement learning (RL) for AI opponents. Built for testing RL in dynamic environments, inspired by Mario Kart-style racing with tunable difficulty.
+
+## Quick Start: RL Training and Testing
+
+To train and test the PPO-based RL agent for the AI opponent:
+
+### Requirements (RL-Specific)
+In addition to base requirements, install RL libraries:
+```bash
+pip install stable-baselines3 gymnasium torch  # PPO + env wrapper
+```
+
+### Training the Agent
+1. Ensure `IS_TRAINING=true` in your environment (or set via `os.environ` in scripts).
+2. Run the quick training script for a short test (4k steps, ~10 min):
+   ```bash
+   python train_ppo_quick.py
+   ```
+   - Outputs checkpoints to `./models/` (e.g., `ppo_race_quick_custom_500_steps.zip`).
+   - Eval logs to `./logs/` (e.g., `evaluations_500.npz` with mean rewards/lengths).
+
+3. For full training (e.g., 200k+ steps, ~1-2 hours on CPU; faster on GPU):
+   - Edit `train_ppo_quick.py`: Set `total_timesteps=200000`, `save_freq=5000`, `eval_freq=5000`.
+   - Run: `python train_ppo_quick.py`.
+   - Monitor verbose output for rewards (target: >100 normalized returns) and losses.
+
+### Testing the Agent
+1. Load a trained model in-game:
+   - Edit `main.py`: Uncomment `ChosenAIOpponent = AIOpponent` (default is random baseline).
+   - Set `model_path` in `ai_opponent.py` to your checkpoint (e.g., `"models/ppo_race_quick_custom_200000_steps.zip"`).
+
+2. Run the game:
+   ```bash
+   python main.py
+   ```
+   - Race against the RL AI on procedural tracks (complexity 6-24 via arrows in menu).
+   - Use `R` to reset positions; `N` for new track.
+
+3. Standalone Eval (from training script):
+   - After training, load the final model: `model = PPO.load("models/ppo_race_quick_final.zip")`.
+   - Run evals manually via `CustomEvalCallback` for metrics like mean reward/length.
+
+**Tips**: 
+- Tracks randomize on reset for domain adaptation.
+- Debug: Set `render_mode='human'` in `RacingEnv` for visual training (slower).
+- Compare baselines: Toggle to `RandomAIOpponent` in `main.py`.
+
+For full reproducibility, see [GitHub Repo](https://github.com/CameronEgb/RLRacing).
 
 ## Features
 
-- **Procedural Track Generation**: Every run features a unique racing circuit generated using Catmull-Rom splines
-- **Realistic Car Physics**: Implements proper vehicle dynamics including:
-  - Vector-based velocity and acceleration
-  - Tire friction with grip limits
-  - Weight transfer effects
-  - Engine torque curves and RPM simulation
-  - Aerodynamic drag and downforce
-  - Realistic collision response
-- **AI Opponent**: Placeholder AI system ready for expansion
-- **Low-Poly Chill Aesthetic**: Clean, minimalist visual design
-- **Smooth Camera System**: Predictive camera following with lookahead
-- **Visual Effects**: Tire marks, particles, and audio visualization
+- **Procedural Track Generation**: Unique circuits via Catmull-Rom splines, tunable width/complexity.
+- **Realistic Car Physics**: Vector velocity, tire friction (Pacejka approx.), weight transfer, torque curves, drag/downforce, collisions.
+- **RL-Powered AI Opponent**: PPO agent (Stable Baselines3) learns from pixel obs; outperforms random on straights, tunable skill.
+- **Low-Poly Chill Aesthetic**: Minimalist polygons, muted colors, smooth camera with lookahead.
+- **Visual Effects**: Tire marks, particles, UI overlays (lap times, speeds).
+- **Game Modes**: Menu for settings; race with resets/new tracks.
 
-## Requirements
+## Base Requirements
 
-- Python 3.7+
+- Python 3.10+
 - Pygame 2.0+
 
-## Installation
+## Full Installation
 
-1. Install Python 3.7 or higher from [python.org](https://www.python.org/)
+1. Install Python 3.10+ from [python.org](https://www.python.org/).
 
-2. Install Pygame:
+2. Install dependencies:
    ```bash
-   pip install pygame
+   pip install pygame stable-baselines3 gymnasium torch numpy  # Base + RL
    ```
 
-3. Download all game files:
-   - `main.py`
-   - `track_generator.py` 
-   - `car.py`
-   - `ux.py`
-   - `ai_opponent.py`
+3. Clone/Download files:
+   - Core: `main.py`, `track_generator.py`, `car.py`, `ux.py`.
+   - RL: `ai_opponent.py`, `env_wrapper.py`, `train_ppo_quick.py`, `random_ai_opponent.py`.
 
-## How to Run
+## Running the Base Game
 
-1. Open terminal/command prompt in the game directory
-2. Run the game:
+1. In the project directory:
    ```bash
    python main.py
    ```
 
 ## Controls
 
-- **WASD** or **Arrow Keys**: Drive the car
-  - W/Up: Accelerate
-  - S/Down: Brake/Reverse
-  - A/Left: Turn left
-  - D/Right: Turn right
-- **ESC**: Quit game
+- **WASD/Arrows**: Drive (W: accel, S: brake, A/D: steer).
+- **Space**: Handbrake (bonus grip).
+- **ESC**: Menu/Quit.
+- **R**: Reset cars (in race).
+- **N**: New track with pending settings.
+- **Arrows (Menu)**: Adjust pending width (Up/Down) / complexity (Left/Right).
+- **Enter**: Start race.
 
 ## Game Architecture
 
 ### Core Modules
 
-1. **main.py**: Entry point, initializes game systems and runs main loop
-2. **track_generator.py**: Procedural track generation using mathematical splines
-3. **car.py**: Realistic vehicle physics simulation
-4. **ux.py**: Camera, rendering, input handling, and UI
-5. **ai_opponent.py**: AI opponent controller (currently minimal placeholder)
+1. **main.py**: Main loop, state management (menu/race), input/UI.
+2. **track_generator.py**: Spline-based track gen with racing lines/checkpoints.
+3. **car.py**: Physics sim (velocity, forces, collisions).
+4. **ux.py**: Rendering, camera, effects, debug overlays.
+5. **ai_opponent.py**: RL inference (PPO on stacked grayscale frames).
+6. **env_wrapper.py**: Gymnasium env for training (pixel obs, discrete actions).
+7. **train_ppo_quick.py**: PPO training with vec envs, callbacks.
+8. **random_ai_opponent.py**: Simple baseline for comparison.
 
 ### Physics Implementation
 
-The car physics system replicates real-world driving behavior:
+- **Engine**: RPM-torque curves, gears.
+- **Tires**: Slip angles, friction variants (on/off-track).
+- **Dynamics**: Under/oversteer, trail braking, weight shift.
+- **RL Integration**: Syncs car state to env for real-time pixel-based actions.
 
-- **Engine Simulation**: RPM-based torque curves, gear ratios
-- **Tire Physics**: Grip limits, slip angles, Pacejka tire model approximation  
-- **Aerodynamics**: Drag forces, downforce effects
-- **Weight Transfer**: Affects steering during acceleration/braking
-- **Surface Friction**: Different grip levels on/off track
+### Track Generation
 
-### Track Generation Algorithm
+1. Random control points in loop.
+2. Catmull-Rom splines for centerline.
+3. Perp offsets for boundaries.
+4. Curvature-based racing line.
+5. Procedural variety: Width (30-80), complexity (6-24 points).
 
-1. **Control Points**: Generate random points in circular pattern
-2. **Spline Interpolation**: Use Catmull-Rom splines for smooth curves
-3. **Boundary Creation**: Calculate perpendicular offsets for track width
-4. **Racing Line**: Analyze curvature to determine optimal path
-5. **Checkpoints**: Place lap detection points evenly around track
+### Rendering
 
-### Rendering System
-
-- **Low-Poly Aesthetic**: Simple polygons, clean lines, muted colors
-- **Camera Following**: Smooth tracking with predictive lookahead
-- **Visual Effects**: Tire marks, dust particles, audio visualization
-- **UI Design**: Semi-transparent panels with performance info
+- Top-down view, 1200x800 window.
+- Low-poly: Simple polys, gradients.
+- Effects: Particles, marks; 60 FPS target.
 
 ## Customization
 
-### Track Generation
-Modify `generate_track()` parameters in `main.py`:
-- `width`: Track width (default: 50)
-- `complexity`: Number of control points (default: 8)
-
-### Car Properties
-Adjust car parameters in `main.py`:
-- `max_speed`: Top speed limit
-- `acceleration`: Engine power
-- `turning_speed`: Steering responsiveness  
-- `friction`: Grip level
-
-### Visual Style
-Edit color palette in `ux.py`:
+### Track Params (in `main.py`)
 ```python
-self.colors = {
-    'grass': (85, 120, 85),
-    'track': (70, 70, 80),
-    'sky': (120, 140, 160),
-    # ... more colors
-}
+track = generate_track(width=50, complexity=10)
 ```
+
+### Car Tuning (in `car.py`)
+```python
+self.max_speed = 200  # px/s
+self.acceleration = 5.0
+self.friction = 0.8
+```
+
+### RL Params (in `train_ppo_quick.py`)
+```python
+model = PPO("CnnPolicy", vec_env, learning_rate=3e-4, n_steps=512//8)
+```
+
+### Visuals (in `ux.py`)
+```python
+self.colors = {'grass': (85, 120, 85), 'track': (70, 70, 80)}
+```
+
+## RL Evaluation & Metrics
+
+- **Training Logs**: Verbose PPO output (rewards, losses); check `./logs/` for NPZ evals.
+- **Key Metrics**: Episode reward (progress - penalties), length (sustained driving), velocity (px/s).
+- **Baselines**: Random AI (uniform actions); human play.
+- **Pilot Results**: At 1.7M steps, rewards ~45 (up from -20); stable policy but high value loss (50)—needs longer runs.
+- **Debug**: Enable `show_racing_line=True` in `ux.py`; monitor stuck timers in AI.
 
 ## Future Enhancements
 
-The game architecture supports easy expansion:
-
-- **AI Racing**: Implement path following, overtaking, strategic behavior
-- **Multiplayer**: Add split-screen or network multiplayer
-- **Car Tuning**: Adjustable suspension, aerodynamics, engine mapping
-- **Weather Effects**: Rain, wind affecting physics
-- **Championship Mode**: Multiple races, points system
-- **Sound System**: Engine audio, tire squealing, collision sounds
-- **Track Editor**: Visual track creation tools
+- **Advanced RL**: Curriculum learning, hybrid states (pixels + vectors), multi-agent.
+- **Modes**: Grand Prix (pre-gen tracks), Arcade (endless scoring).
+- **AI Scaling**: Difficulty via entropy/noise; overtake logic.
+- **Extras**: Multiplayer, weather, car variants, sound, track editor.
+- **Research**: Ablate rewards for optimal lines (RQ3); benchmark vs. humans (RQ2).
 
 ## Technical Details
 
-### Performance
-- Target: 60 FPS
-- Optimized rendering with screen culling
-- Particle system with automatic cleanup
-- Efficient collision detection
-
-### Physics Accuracy
-The physics system models real racing concepts:
-- Late apex cornering technique
-- Trail braking effects
-- Understeer/oversteer balance
-- Racing line optimization
-- Tire temperature simulation (framework in place)
+- **Performance**: 60 FPS; vec envs for parallel training (8 envs).
+- **RL Setup**: Discrete(5) actions; grayscale CNN obs (64x64x6 stack); domain randomization via proc tracks.
+- **Physics Accuracy**: Supports late-apex, grip limits; RL learns straights but struggles on turns.
 
 ## Troubleshooting
 
-### Common Issues
+- **Training Crashes**: Set `SDL_VIDEODRIVER=dummy`; check env seed.
+- **Slow Inference**: Use deterministic predict; reduce frame stack.
+- **No Model Load**: Verify path in `ai_opponent.py`; train first.
+- **Pygame Issues**: Update SDL; test headless.
+- **Debug**: Add `print` in `update()`; visualize obs in env.
 
-1. **Game won't start**: Check Python and Pygame versions
-2. **Poor performance**: Reduce particle count in `ux.py`
-3. **Car feels unresponsive**: Adjust input smoothing in `handle_input()`
-4. **Track looks wrong**: Regenerate by restarting (tracks are random)
+## License & Credits
 
-### Debug Mode
-
-Add debug features by modifying `ux.py`:
-```python
-self.show_racing_line = True  # Show optimal path
-self.debug_physics = True     # Show force vectors
-```
-
-## License
-
-This game is provided as-is for educational and entertainment purposes. Feel free to modify and expand upon the codebase.
-
-## Credits
-
-- Procedural generation using Catmull-Rom spline mathematics
-- Physics based on real vehicle dynamics principles
-- Low-poly aesthetic inspired by modern indie games
-- Built with Python and Pygame
+MIT License for educational use. Credits: Catmull-Rom math, Stable Baselines3 for PPO, Pygame for rendering. Authors: Kevin Alvarenga, Cameron Egbert (NCSU).
