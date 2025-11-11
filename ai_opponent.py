@@ -15,7 +15,7 @@ class AIOpponent:
     Replaces placeholder with model-driven actions based on pixel observations.
     """
     
-    def __init__(self, car: Car, track_data: Dict, model_path: str = "models/ppo_race_quick_final"):
+    def __init__(self, car: Car, track_data: Dict, model_path: str = "models/ppo_race_quick_custom_200000_steps"):
         self.car = car
         self.track_data = track_data
         

@@ -4,11 +4,13 @@ from track_generator import generate_track
 from car import Car
 from ux import GameUX
 from ai_opponent import AIOpponent
+from random_ai_opponent import RandomAIOpponent  # Or wherever you save the new file
 
 
 def main():
     pygame.init()
-
+    ChosenAIOpponent = RandomAIOpponent
+    #ChoseAIOpponent = AIOpponent
     SCREEN_WIDTH, SCREEN_HEIGHT = 1200, 800
     FPS = 60
 
@@ -54,7 +56,8 @@ def main():
         ay = track["start_pos"][1] + ny * lane_offset - ty * 20.0
         ai = Car(ax, ay, track["start_angle"], color=(255, 150, 100), name="AI Opponent")
 
-        ai_ctrl = AIOpponent(ai, track)
+        #ai_ctrl = AIOpponent(ai, track)
+        ai_ctrl = ChosenAIOpponent(ai, track)
         ux = GameUX(screen, track, player, ai)
         return track, player, ai, ai_ctrl, ux
 
