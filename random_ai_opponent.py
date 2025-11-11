@@ -46,11 +46,11 @@ class RandomAIOpponent:
         throttle, steering = random.choice(_ACTIONS)
         
         # Optional: Bias towards forward actions based on aggressiveness (e.g., more throttle)
-        if self.aggressiveness > 0.5 and random.random() < 0.7:
+        #if self.aggressiveness > 0.5 and random.random() < 0.7:
             # Favor positive throttle actions
-            forward_actions = [(t, s) for t, s in _ACTIONS if t > 0]
-            if forward_actions:
-                throttle, steering = random.choice(forward_actions)
+        #    forward_actions = [(t, s) for t, s in _ACTIONS if t > 0]
+        #    if forward_actions:
+        #        throttle, steering = random.choice(forward_actions)
         
         self.car.set_input(throttle, steering)
         

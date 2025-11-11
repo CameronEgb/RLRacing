@@ -77,7 +77,6 @@ class CustomEvalCallback(BaseCallback):
             self.last_eval = self.n_calls
         return True
 
-
 def make_env(rank=0, seed=0):
     def _init():
         env = RacingEnv(

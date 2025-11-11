@@ -9,13 +9,15 @@ from random_ai_opponent import RandomAIOpponent  # Or wherever you save the new 
 
 def main():
     pygame.init()
-    ChosenAIOpponent = RandomAIOpponent
-    #ChoseAIOpponent = AIOpponent
+    # For AI vs AI: Use both AIOpponent and RandomAIOpponent
+    ai_ppo_class = AIOpponent
+    ai_random_class = RandomAIOpponent
+    
     SCREEN_WIDTH, SCREEN_HEIGHT = 1200, 800
     FPS = 60
 
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pygame.display.set_caption("Low-Poly Racing - Chill Vibes")
+    pygame.display.set_caption("Low-Poly Racing - AI vs AI")
     clock = pygame.time.Clock()
 
     # --- State ---
@@ -32,7 +34,7 @@ def main():
     # ---- Helpers ----
 
     def build_world(width_val: int, complexity_val: int):
-        """(Re)build a brand-new world using provided params."""
+        """(Re)build a brand-new world using provided params with two AI opponents."""
         track = generate_track(width=width_val, complexity=complexity_val)
 
         # Start grid from centerline tangent + normal
@@ -46,23 +48,26 @@ def main():
         # Side-by-side grid inside the lane
         lane_offset = max(10, int(width_val * 0.35))
 
-        # Player on right side of lane
+        # PPO AI on right side of lane
         px = track["start_pos"][0] - nx * lane_offset
         py = track["start_pos"][1] - ny * lane_offset
-        player = Car(px, py, track["start_angle"], color=(100, 150, 255), name="Player")
+        ai_ppo = Car(px, py, track["start_angle"], color=(100, 150, 255), name="AI PPO")
 
-        # AI on left side, slightly back
+        # Random AI on left side, slightly back
         ax = track["start_pos"][0] + nx * lane_offset - tx * 20.0
         ay = track["start_pos"][1] + ny * lane_offset - ty * 20.0
-        ai = Car(ax, ay, track["start_angle"], color=(255, 150, 100), name="AI Opponent")
+        ai_random = Car(ax, ay, track["start_angle"], color=(255, 150, 100), name="AI Random")
 
-        #ai_ctrl = AIOpponent(ai, track)
-        ai_ctrl = ChosenAIOpponent(ai, track)
-        ux = GameUX(screen, track, player, ai)
-        return track, player, ai, ai_ctrl, ux
+        # Controllers for both AIs
+        ai_ctrl_ppo = ai_ppo_class(ai_ppo, track)
+        ai_ctrl_random = ai_random_class(ai_random, track)
+        
+        # UX for two AIs (adjust if GameUX needs modification; assume it handles car1, car2)
+        ux = GameUX(screen, track, ai_ppo, ai_random)
+        return track, ai_ppo, ai_random, ai_ctrl_ppo, ai_ctrl_random, ux
 
-    def reset_grid_on_current(track, width_val, player, ai, ai_opponent):
-        """Reset both cars to the start grid on the *existing* track."""
+    def reset_grid_on_current(track, width_val, ai_ppo, ai_random, ai_ctrl_ppo, ai_ctrl_random):
+        """Reset both AIs to the start grid on the *existing* track."""
         c0 = track["centerline"][0]
         c1 = track["centerline"][1]
         tx, ty = (c1[0] - c0[0], c1[1] - c0[1])
@@ -77,12 +82,13 @@ def main():
         ax = track["start_pos"][0] + nx * lane_offset - tx * 20.0
         ay = track["start_pos"][1] + ny * lane_offset - ty * 20.0
 
-        player.reset(px, py, track["start_angle"])
-        ai.reset(ax, ay, track["start_angle"])
-        ai_opponent.reset_position(ax, ay, track["start_angle"])  # Sync AI env
+        ai_ppo.reset(px, py, track["start_angle"])
+        ai_random.reset(ax, ay, track["start_angle"])
+        ai_ctrl_ppo.reset_position(px, py, track["start_angle"])  # Sync PPO env
+        ai_ctrl_random.reset_position(ax, ay, track["start_angle"])  # Sync Random if needed
 
-    # Build the initial world with current settings
-    track, player, ai, ai_opponent, ux = build_world(curr_width, curr_complexity)
+    # Build the initial world with current settings (two AIs)
+    track, ai_ppo, ai_random, ai_ctrl_ppo, ai_ctrl_random, ux = build_world(curr_width, curr_complexity)
 
     running = True
     while running:
@@ -104,7 +110,7 @@ def main():
                         # update outer scope
                         curr_width = nonlocal_curr_width
                         curr_complexity = nonlocal_curr_complexity
-                        track, player, ai, ai_opponent, ux = build_world(curr_width, curr_complexity)
+                        track, ai_ppo, ai_random, ai_ctrl_ppo, ai_ctrl_random, ux = build_world(curr_width, curr_complexity)
                     elif event.key == pygame.K_LEFT:
                         pend_complexity = max(6, pend_complexity - 1)
                     elif event.key == pygame.K_RIGHT:
@@ -121,28 +127,22 @@ def main():
                         # Back to menu (do not exit)
                         STATE = "menu"
                     elif event.key == pygame.K_r:
-                        # Reset cars on the EXISTING track (no regen)
-                        reset_grid_on_current(track, curr_width, player, ai, ai_opponent)
+                        # Reset AIs on the EXISTING track (no regen)
+                        reset_grid_on_current(track, curr_width, ai_ppo, ai_random, ai_ctrl_ppo, ai_ctrl_random)
                     elif event.key == pygame.K_n:
                         # Rebuild using the current PENDING values
                         curr_width = pend_width
                         curr_complexity = pend_complexity
-                        track, player, ai, ai_opponent, ux = build_world(curr_width, curr_complexity)
+                        track, ai_ppo, ai_random, ai_ctrl_ppo, ai_ctrl_random, ux = build_world(curr_width, curr_complexity)
 
         # --- Update/Render ---
         if STATE == "race":
-            keys = pygame.key.get_pressed()
-            throttle = (1.0 if (keys[pygame.K_w] or keys[pygame.K_UP]) else 0.0) - (
-                1.0 if (keys[pygame.K_s] or keys[pygame.K_DOWN]) else 0.0
-            )
-            steering = (-1.0 if (keys[pygame.K_a] or keys[pygame.K_LEFT]) else 0.0) + (
-                1.0 if (keys[pygame.K_d] or keys[pygame.K_RIGHT]) else 0.0
-            )
-            player.set_input(throttle, steering, keys[pygame.K_SPACE])
-
-            player.update(dt, track)
-            ai_opponent.update(dt)
-            ai.update(dt, track)
+            # No player input; update both AIs
+            ai_ctrl_ppo.update(dt)
+            ai_ppo.update(dt, track)
+            
+            ai_ctrl_random.update(dt)
+            ai_random.update(dt, track)
 
             ux.render()
         else:
@@ -158,8 +158,8 @@ def main():
             small = pygame.font.SysFont("arial", 20)
 
             lines = [
-                "RLRacing — Menu",
-                "ENTER: Start   |   N: Apply pending & New Track",
+                "RLRacing — AI vs AI Menu",
+                "ENTER: Start Race   |   N: Apply pending & New Track",
                 "ESC: Quit (from menu)   |   R: Reset (in race)",
                 "",
                 f"Current — Width: {curr_width}   Complexity: {curr_complexity}",
@@ -167,6 +167,8 @@ def main():
                 "",
                 "Adjust pending with arrow keys:",
                 "Up/Down = Width,  Left/Right = Complexity",
+                "",
+                "PPO AI (Blue) vs Random AI (Orange)"
             ]
 
             for i, line in enumerate(lines):

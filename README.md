@@ -1,3 +1,6 @@
+# AI USAGE NOTICE FOR COMPLIANCE WITH COURSE AI USAGE POLICY
+Everything in this assignment was AI generated
+
 # Reinforced Racing: Low-Poly Racing Game with RL Opponents
 
 A top-down racing game with procedurally generated tracks, realistic physics, a chill low-poly aesthetic, and reinforcement learning (RL) for AI opponents. Built for testing RL in dynamic environments, inspired by Mario Kart-style racing with tunable difficulty.
@@ -5,42 +8,43 @@ A top-down racing game with procedurally generated tracks, realistic physics, a 
 ## Quick Start: RL Training and Testing
 
 To train and test the PPO-based RL agent for the AI opponent:
+We are using a virtual environment, and we recommend you do the same. 
 
 ### Requirements (RL-Specific)
 In addition to base requirements, install RL libraries:
 ```bash
-pip install stable-baselines3 gymnasium torch  # PPO + env wrapper
+pip install stable-baselines3 gymnasium torch  # PPO + env wrapper
 ```
 
 ### Training the Agent
 1. Ensure `IS_TRAINING=true` in your environment (or set via `os.environ` in scripts).
 2. Run the quick training script for a short test (4k steps, ~10 min):
-   ```bash
-   python train_ppo_quick.py
-   ```
-   - Outputs checkpoints to `./models/` (e.g., `ppo_race_quick_custom_500_steps.zip`).
-   - Eval logs to `./logs/` (e.g., `evaluations_500.npz` with mean rewards/lengths).
+   ```bash
+   python train_ppo_quick.py
+   ```
+   - Outputs checkpoints to `./models/` (e.g., `ppo_race_quick_custom_500_steps.zip`).
+   - Eval logs to `./logs/` (e.g., `evaluations_500.npz` with mean rewards/lengths).
 
 3. For full training (e.g., 200k+ steps, ~1-2 hours on CPU; faster on GPU):
-   - Edit `train_ppo_quick.py`: Set `total_timesteps=200000`, `save_freq=5000`, `eval_freq=5000`.
-   - Run: `python train_ppo_quick.py`.
-   - Monitor verbose output for rewards (target: >100 normalized returns) and losses.
+   - Edit `train_ppo_quick.py`: Set `total_timesteps=200000`, `save_freq=5000`, `eval_freq=5000`.
+   - Run: `python train_ppo_quick.py`.
+   - Monitor verbose output for rewards (target: >100 normalized returns) and losses.
 
 ### Testing the Agent
 1. Load a trained model in-game:
-   - Edit `main.py`: Uncomment `ChosenAIOpponent = AIOpponent` (default is random baseline).
-   - Set `model_path` in `ai_opponent.py` to your checkpoint (e.g., `"models/ppo_race_quick_custom_200000_steps.zip"`).
+   - Edit `main.py`: Uncomment `ChosenAIOpponent = AIOpponent` (default is random baseline).
+   - Set `model_path` in `ai_opponent.py` to your checkpoint (e.g., `"models/ppo_race_quick_custom_200000_steps"`).
 
 2. Run the game:
-   ```bash
-   python main.py
-   ```
-   - Race against the RL AI on procedural tracks (complexity 6-24 via arrows in menu).
-   - Use `R` to reset positions; `N` for new track.
+   ```bash
+   python main.py
+   ```
+   - Race against the RL AI on procedural tracks (complexity 6-24 via arrows in menu).
+   - Use `R` to reset positions; `N` for new track.
 
 3. Standalone Eval (from training script):
-   - After training, load the final model: `model = PPO.load("models/ppo_race_quick_final.zip")`.
-   - Run evals manually via `CustomEvalCallback` for metrics like mean reward/length.
+   - After training, load the final model: `model = PPO.load("models/ppo_race_quick_final.zip")`.
+   - Run evals manually via `CustomEvalCallback` for metrics like mean reward/length.
 
 **Tips**: 
 - Tracks randomize on reset for domain adaptation.
@@ -68,20 +72,20 @@ For full reproducibility, see [GitHub Repo](https://github.com/CameronEgb/RLRaci
 1. Install Python 3.10+ from [python.org](https://www.python.org/).
 
 2. Install dependencies:
-   ```bash
-   pip install pygame stable-baselines3 gymnasium torch numpy  # Base + RL
-   ```
+   ```bash
+   pip install pygame stable-baselines3 gymnasium torch numpy  # Base + RL
+   ```
 
 3. Clone/Download files:
-   - Core: `main.py`, `track_generator.py`, `car.py`, `ux.py`.
-   - RL: `ai_opponent.py`, `env_wrapper.py`, `train_ppo_quick.py`, `random_ai_opponent.py`.
+   - Core: `main.py`, `track_generator.py`, `car.py`, `ux.py`.
+   - RL: `ai_opponent.py`, `env_wrapper.py`, `train_ppo_quick.py`, `random_ai_opponent.py`.
 
 ## Running the Base Game
 
 1. In the project directory:
-   ```bash
-   python main.py
-   ```
+   ```bash
+   python main.py
+   ```
 
 ## Controls
 
@@ -108,7 +112,6 @@ For full reproducibility, see [GitHub Repo](https://github.com/CameronEgb/RLRaci
 
 ### Physics Implementation
 
-- **Engine**: RPM-torque curves, gears.
 - **Tires**: Slip angles, friction variants (on/off-track).
 - **Dynamics**: Under/oversteer, trail braking, weight shift.
 - **RL Integration**: Syncs car state to env for real-time pixel-based actions.
@@ -136,7 +139,7 @@ track = generate_track(width=50, complexity=10)
 
 ### Car Tuning (in `car.py`)
 ```python
-self.max_speed = 200  # px/s
+self.max_speed = 200  # px/s
 self.acceleration = 5.0
 self.friction = 0.8
 ```
@@ -158,14 +161,6 @@ self.colors = {'grass': (85, 120, 85), 'track': (70, 70, 80)}
 - **Baselines**: Random AI (uniform actions); human play.
 - **Pilot Results**: At 1.7M steps, rewards ~45 (up from -20); stable policy but high value loss (50)—needs longer runs.
 - **Debug**: Enable `show_racing_line=True` in `ux.py`; monitor stuck timers in AI.
-
-## Future Enhancements
-
-- **Advanced RL**: Curriculum learning, hybrid states (pixels + vectors), multi-agent.
-- **Modes**: Grand Prix (pre-gen tracks), Arcade (endless scoring).
-- **AI Scaling**: Difficulty via entropy/noise; overtake logic.
-- **Extras**: Multiplayer, weather, car variants, sound, track editor.
-- **Research**: Ablate rewards for optimal lines (RQ3); benchmark vs. humans (RQ2).
 
 ## Technical Details
 
