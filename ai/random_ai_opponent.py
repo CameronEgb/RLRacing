@@ -1,7 +1,7 @@
 # New file: random_ai_opponent.py
 import random
 from typing import Dict
-from car import Car
+from game.car import Car
 
 # Assuming _ACTIONS is defined elsewhere (e.g., import from env_wrapper if needed).
 # For this example, I'll define a placeholder _ACTIONS here. Replace with the actual one from your env_wrapper.

@@ -3,9 +3,9 @@ import random
 import numpy as np
 from typing import Dict, List, Tuple
 from collections import deque
-from car import Car
+from game.car import Car
 from stable_baselines3 import PPO
-from env_wrapper import RacingEnv, _ACTIONS
+from ai.env_wrapper import RacingEnv, _ACTIONS
 import pygame  # For surfarray and transform
 
 class AIOpponent:

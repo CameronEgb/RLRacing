@@ -16,7 +16,7 @@ import gymnasium as gym
 import numpy as np
 
 # Adjust path if necessary
-from env_wrapper import RacingEnv
+from ai.env_wrapper import RacingEnv
 
 # Custom callback to force checkpoints and evals (bypasses SB3 bugs)
 from stable_baselines3.common.callbacks import BaseCallback
