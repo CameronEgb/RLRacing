@@ -28,7 +28,7 @@ class GameUX:
         # Meta-info: used for HUD
         self.mode = meta.get("mode", "Arcade")
         self.difficulty = meta.get("difficulty", "NORMAL")
-        self.weather = meta.get("weather", "CLEAR")
+        self.weather = track_data.get("intended_weather", "CLEAR")
         self.track_name = meta.get("track_name", "Random Track")
         self.seed = meta.get("seed", None)
 

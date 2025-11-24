@@ -3,8 +3,6 @@ import random
 from typing import Dict
 from game.car import Car
 
-# Assuming _ACTIONS is defined elsewhere (e.g., import from env_wrapper if needed).
-# For this example, I'll define a placeholder _ACTIONS here. Replace with the actual one from your env_wrapper.
 _ACTIONS = [
     (0.0, 0.0),    # No input
     (1.0, 0.0),    # Full throttle, straight
@@ -37,7 +35,7 @@ class RandomAIOpponent:
         self.last_position = (car.x, car.y)
         self.stuck_timer = 0
     
-    def update(self, dt: float):
+    def update(self, dt: float, game_ref=None):
         """
         Update AI opponent with a random action.
         Applies to car via set_input.

@@ -16,6 +16,7 @@ def generate_track(
     width: int = 50,
     complexity: int = 10,
     seed: Optional[int] = None,
+    intended_weather: str = "CLEAR"
 ) -> Dict:
     """
     Generate a closed racing track.
@@ -91,6 +92,9 @@ def generate_track(
     start_pos = center[0]
     start_angle = math.atan2(center[1][1] - center[0][1], center[1][0] - center[0][0])
 
+    # 7) Check valid weather
+    assert intended_weather in ["CLEAR", "RAIN", "SNOW"]
+
     return {
         "centerline": center,
         "inner_boundary": inner,
@@ -101,6 +105,7 @@ def generate_track(
         "start_angle": start_angle,
         "width": effective_width,  # geometry width actually used
         "seed": seed,
+        "intended_weather": intended_weather
     }
 
 

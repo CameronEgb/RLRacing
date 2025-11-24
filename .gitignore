@@ -9,4 +9,5 @@ __pycache__/
 
 # Ignore zip models
 *.zip
-models/*.zip
+models/
+logs/

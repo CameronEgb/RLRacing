@@ -1,5 +1,6 @@
 # config.py
 import pygame
+import os
 
 SCREEN_WIDTH, SCREEN_HEIGHT = 1200, 800
 FPS = 60
@@ -10,6 +11,15 @@ START_MOVE_RADIUS = 40.0
 
 ARCADE_WINS_TARGET = 3
 GP_RACES_PER_CUP = 3
+
+# Directories
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TRACKS_DIR = os.path.join(BASE_DIR, "tracks")
+MODELS_DIR = os.path.join(BASE_DIR, "models")
+
+# Ensure they exist
+os.makedirs(TRACKS_DIR, exist_ok=True)
+os.makedirs(MODELS_DIR, exist_ok=True)
 
 CUP_NAMES = ["Forest Cup", "Canyon Cup", "City Cup"]
 

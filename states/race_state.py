@@ -18,7 +18,7 @@ def handle_race(game, dt):
     game.player_car.update(dt, game.track_data)
 
     if game.ai_opponent:
-        game.ai_opponent.update(dt)
+        game.ai_opponent.update(dt, game_ref=game)
     game.ai_car.update(dt, game.track_data)
 
     # Car-car collision
@@ -35,7 +35,7 @@ def handle_race(game, dt):
         game.ai_car.x += nx * overlap * 0.5
         game.ai_car.y += ny * overlap * 0.5
 
-        # Kill normal component of velocity
+    # Kill normal component of velocity
         vp_n = game.player_car.vx * nx + game.player_car.vy * ny
         va_n = game.ai_car.vx * nx + game.ai_car.vy * ny
         if vp_n > 0:
@@ -115,7 +115,7 @@ def handle_race(game, dt):
                 game.state = "menu"
                 game.menu_substate = "root"
             if event.key == pygame.K_r:
-                game.build_world(game.settings)  # reset race
+                game.start_race(game.settings)  # reset race
 
     pygame.display.flip()
     return True

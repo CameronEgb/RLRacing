@@ -2,6 +2,7 @@
 import pygame
 from ui.button import Button
 from config import *
+from game.track_storer import load_track 
 
 def create_button(rect, text, action=None):
     return Button(rect, text, FONT_BTN, action)
@@ -22,24 +23,63 @@ def handle_menu(game, dt):
 
     buttons = []
 
+    # --- ROOT MENU ---
     if game.menu_substate == "root":
         title = FONT_TITLE.render("RLRacing – Main Menu", True, (240, 240, 240))
         screen.blit(title, title.get_rect(center=(cx, 200)))
 
-        sub = FONT_SMALL.render("Choose a mode to begin:", True, (230, 230, 230))
+        sub = FONT_SMALL.render("Choose a mode:", True, (200, 200, 200))
         screen.blit(sub, sub.get_rect(center=(cx, 250)))
 
         def go_arcade():
             game.menu_substate = "arcade"
             game.pending["mode"] = "ARCADE"
+        
         def go_gp():
             game.menu_substate = "grand_prix"
             game.pending["mode"] = "GRAND_PRIX"
+            
+        def go_ai_opp():
+            game.menu_substate = "ai_opp_select"
+            game.pending["mode"] = "AI_OPP"
 
-        buttons = [
-            create_button((cx-130, 320, 260, 48), "Arcade", go_arcade),
-            create_button((cx-130, 380, 260, 48), "Grand Prix", go_gp),
-        ]
+        # Main Mode Buttons
+        buttons.append(create_button((cx-150, 300, 300, 50), "Arcade Mode", go_arcade))
+        buttons.append(create_button((cx-150, 370, 300, 50), "Grand Prix", go_gp))
+        # New Button
+        buttons.append(create_button((cx-150, 440, 300, 50), "AI Battle (RL)", go_ai_opp))
+        
+        buttons.append(create_button((cx-150, 550, 300, 50), "Quit", lambda: setattr(game, 'running', False)))
+
+    # --- AI TRACK SELECTION ---
+    elif game.menu_substate == "ai_opp_select":
+        title = FONT_TITLE.render("Select Track for AI Battle", True, (240, 240, 240))
+        screen.blit(title, title.get_rect(center=(cx, 100)))
+        
+        # List JSON files in tracks/
+        try:
+            track_files = [f for f in os.listdir(TRACKS_DIR) if f.endswith(".json")]
+        except FileNotFoundError:
+            track_files = []
+
+        if not track_files:
+            msg = FONT_SMALL.render("No tracks found in /tracks/", True, (255, 100, 100))
+            screen.blit(msg, msg.get_rect(center=(cx, 300)))
+        else:
+            start_y = 180
+            for i, filename in enumerate(track_files):
+                name = os.path.splitext(filename)[0]
+                
+                def make_selector(fname):
+                    return lambda: start_ai_race(game, fname)
+                
+                buttons.append(create_button(
+                    (cx-200, start_y + i*60, 400, 50), 
+                    f"{name} (Best Model)", 
+                    make_selector(filename)
+                ))
+
+        buttons.append(create_button((cx-100, 700, 200, 50), "Back", lambda: setattr(game, 'menu_substate', 'root')))
 
     elif game.menu_substate == "arcade":
         title = FONT_TITLE.render("Arcade Mode", True, (240, 240, 240))
@@ -56,7 +96,7 @@ def handle_menu(game, dt):
             game.settings.update(game.pending)
             if not game.arcade.active:
                 game.arcade.start()
-            game.build_world(game.settings)
+            game.start_race(game.settings)
             game.countdown_timer = 3.0
             game.state = "arcade_countdown"
 
@@ -70,7 +110,7 @@ def handle_menu(game, dt):
             game.menu_substate = "arcade_track"
         def apply():
             game.settings.update(game.pending)
-            game.build_world(game.settings)
+            game.start_race(game.settings)
         def back():
             game.menu_substate = "root"
 
@@ -99,7 +139,7 @@ def handle_menu(game, dt):
         def c_plus():  game.pending["complexity"] = min(24, game.pending["complexity"]+1)
         def apply():
             game.settings.update(game.pending)
-            game.build_world(game.settings)
+            game.start_race(game.settings)
         def back():
             game.menu_substate = "arcade"
 
@@ -129,7 +169,7 @@ def handle_menu(game, dt):
             game.grand_prix.start(game.pending["gp_cup_index"], game.pending["difficulty"], game.pending["weather"])
             preset = GP_CUPS[game.grand_prix.cup_index][0]
             settings = {**game.settings, **preset, "mode": "GRAND_PRIX"}
-            game.build_world(settings)
+            game.start_race(settings)
             game.countdown_timer = 3.0
             game.state = "arcade_countdown"
         def back():
@@ -168,3 +208,13 @@ def handle_menu(game, dt):
 
     pygame.display.flip()
     return True
+
+def start_ai_race(game, filename):
+    """Helper to kick off the AI race immediately."""
+    game.pending["mode"] = "AI_OPP"
+    game.pending["track_filename"] = filename # Store choice
+    print("FILENAME = " + filename)
+    weather = load_track("./tracks/" + filename)["intended_weather"]
+    if weather is not "CLEAR":
+        game.pending["weather"] = weather
+    game.start_race()

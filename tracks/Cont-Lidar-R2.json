@@ -10863,5 +10863,6 @@
   ],
   "start_angle": 1.641042926807862,
   "width": 49.5,
-  "seed": 12345
+  "seed": 12345,
+  "intended_weather": "CLEAR"
 }

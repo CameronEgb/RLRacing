@@ -2,7 +2,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 import numpy as np
-import argparse
 
 def plot_results(log_folder, title='Learning Curve'):
     """
@@ -11,10 +10,6 @@ def plot_results(log_folder, title='Learning Curve'):
     x, y = [], []
     
     # Find monitor file (usually monitor.csv or monitor.csv.1, etc.)
-    if not os.path.exists(log_folder):
-        print(f"Error: Folder {log_folder} does not exist.")
-        return
-
     monitor_files = [os.path.join(log_folder, f) for f in os.listdir(log_folder) if f.startswith('monitor')]
     
     if not monitor_files:
@@ -26,32 +21,16 @@ def plot_results(log_folder, title='Learning Curve'):
     # Read data
     data_frames = []
     for file in monitor_files:
-        print(f"Reading: {file}")
-        try:
-            # Skip the first line (metadata), assume second line is header
-            df = pd.read_csv(file, skiprows=1)
-            
-            # --- FIX: Clean whitespace from column names ---
-            df.columns = df.columns.str.strip()
-            
-            # --- FIX: Check if Dataframe is empty or missing columns ---
-            if df.empty:
-                print(f"  -> Warning: {file} is empty (no episodes finished yet?). Skipping.")
-                continue
-            
-            if 't' not in df.columns or 'r' not in df.columns:
-                print(f"  -> Warning: {file} missing required columns 't' or 'r'. Found: {df.columns}")
-                continue
-
-            data_frames.append(df)
-        except Exception as e:
-            print(f"  -> Error reading {file}: {e}")
+        # Skip the first 1 line which is metadata
+        print(file)
+        df = pd.read_csv(file, skiprows=1)
+        data_frames.append(df)
         
     if not data_frames:
-        print("No valid data found to plot. (Has the agent finished at least one episode?)")
+        print("No valid data found.")
         return
 
-    # Concat if multiple files
+    # Concat if multiple files (e.g. multiple envs), here we usually just have one
     df = pd.concat(data_frames)
     
     # Sort by time
@@ -60,7 +39,7 @@ def plot_results(log_folder, title='Learning Curve'):
     # Calculate Rolling Averages
     window_size = 50
     if len(df) < window_size:
-        window_size = max(1, len(df) // 2) # Ensure window is at least 1
+        window_size = len(df) // 2
 
     # r = reward, l = length, t = time
     df['reward_smooth'] = df['r'].rolling(window=window_size).mean()
@@ -90,7 +69,10 @@ def plot_results(log_folder, title='Learning Curve'):
     plt.tight_layout()
     plt.show()
 
+import argparse
+
 if __name__ == "__main__":
+
     parser = argparse.ArgumentParser()
     parser.add_argument("runname")
     args = parser.parse_args()
@@ -98,4 +80,7 @@ if __name__ == "__main__":
     # Point this to your logs directory
     LOG_DIR = f"./logs/{args.runname}"
     
-    plot_results(LOG_DIR)
+    if os.path.exists(LOG_DIR):
+        plot_results(LOG_DIR)
+    else:
+        print(f"Directory {LOG_DIR} does not exist. Run training first.")
