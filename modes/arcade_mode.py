@@ -6,15 +6,17 @@ class ArcadeSession:
         self.active = False
         self.player_wins = 0
         self.ai_wins = 0
+        self.last_race_winner = None
 
     def start(self):
         self.active = True
         self.player_wins = self.ai_wins = 0
 
     def record_win(self, winner):
-        if winner == "PLAYER":
+        self.last_race_winner = winner
+        if winner == "Player 1":
             self.player_wins += 1
-        elif winner == "AI":
+        elif winner == "Player 2":
             self.ai_wins += 1
 
     def is_finished(self):

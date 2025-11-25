@@ -249,7 +249,8 @@ class GameUX:
 
     def render(self):
         self._draw_track()
-        self._draw_car(self.ai, "AI Opponent")
-        self._draw_car(self.player, "Player")
+        # Use dynamic names from the car objects
+        self._draw_car(self.ai, getattr(self.ai, "name", "P2"))
+        self._draw_car(self.player, getattr(self.player, "name", "P1"))
         self._draw_hud()
         self._draw_weather_overlay()
