@@ -37,74 +37,77 @@ class RLAIOpponent:
             print(f"[ERROR] Model path not found or SB3 missing: {model_path}")
 
     def update(self, dt, game_ref=None):
-        """
-        Called every frame by the game loop.
-        """
         self.debug_step += 1
         
         if not self.model or not game_ref:
-            # Safe fallback if model failed to load
             self.car.set_input(0, 0, False)
             return
 
-        # 1. Get current standardized frame/vector
-        # Pass the correct obs_type so VisionProcessor gives us the right shape
         current_obs = self.vision.get_observation(self.car, game_ref.track_data, obs_type=self.obs_type)
 
-        # 2. Handle Stacking Logic based on Type
         final_obs = None
 
         if self.obs_type == "NUMERIC":
-            # NUMERIC models (MlpPolicy) do NOT want a stack of 4.
-            # They want the single current vector (11,).
-            final_obs = current_obs
-            
+            final_obs = current_obs  # (11,)
+
         else:
-            # VISION or LEGACY models (CnnPolicy) EXPECT a stack of 4.
+            # Stack 4 frames
             if len(self.frame_stack) == 0:
-                # Pre-fill stack on first frame
-                for _ in range(4): self.frame_stack.append(current_obs)
+                for _ in range(4):
+                    self.frame_stack.append(current_obs)
             else:
                 self.frame_stack.append(current_obs)
-            
-            # Convert deque to numpy array -> (4, 64, 64, 1) or (4, 64, 64)
-            final_obs = np.array(self.frame_stack)
-        
-        # 3. Predict
+
+            final_obs = np.array(self.frame_stack)  # (4, 64, 64) or (4, 64, 64, 1)
+
+            # CRITICAL FIX: Auto-correct shape for legacy models
+            if final_obs.shape[-1] == 1:
+                expected_no_channel = (4, 64, 64)
+                expected_with_channel = (4, 64, 64, 1)
+                
+                # Try to infer what the model actually expects
+                model_expected = getattr(self.model.observation_space, 'shape', None)
+                
+                if model_expected == expected_no_channel:
+                    # Legacy model! Remove channel dim
+                    final_obs = final_obs.squeeze(-1)  # (4, 64, 64, 1) → (4, 64, 64)
+                    if self.debug and self.debug_step % 120 == 0:
+                        print("[AI] Legacy model detected → squeezed channel dim")
+                elif model_expected == expected_with_channel or model_expected is None:
+                    # New model or unknown → keep (4, 64, 64, 1)
+                    pass
+                else:
+                    # Still wrong? Force squeeze as last resort (very common with old models)
+                    if final_obs.shape != model_expected:
+                        final_obs = final_obs.squeeze(-1)
+                        if self.debug:
+                            print(f"[AI] Forced squeeze: {final_obs.shape} to match model")
+
+        # Now predict safely
         try:
-            # Predict returns (Action, State)
-            action, _states = self.model.predict(final_obs, deterministic=True)
+            action, _ = self.model.predict(final_obs, deterministic=True)
             
-            throttle = 0.0
-            steering = 0.0
-            
-            # --- AUTO-DETECT Action Type ---
-            
-            # Continuous (Float Array)
-            if np.issubdtype(action.dtype, np.floating):
+            # === Action decoding (unchanged) ===
+            throttle = steering = 0.0
+            if np.issubdtype(action.dtype, np.floating) and len(action) >= 2:
                 throttle = float(action[0])
                 steering = float(action[1])
-                
-            # Multi-Discrete (Integer Array: [SteerIdx, GasIdx])
-            elif action.shape == (2,):
-                steering = float(action[0] - 1) # 0,1,2 -> -1, 0, 1
+            elif hasattr(action, 'shape') and action.shape == (2,):
+                steering = float(action[0] - 1)
                 throttle = float(action[1] - 1)
-                
-            # Discrete Legacy (Single Int)
             else:
                 act_idx = int(action)
-                if act_idx == 0: steering = -1.0
-                elif act_idx == 1: steering = 1.0
-                elif act_idx == 2: throttle = 1.0
-                elif act_idx == 3: throttle = -1.0
+                actions = [(-1,0), (1,0), (0,1), (0,-1), (0,0)]
+                if act_idx < len(actions):
+                    steering, throttle = actions[act_idx]
 
-            # Optional: Debug Print (Every 60 frames)
             if self.debug and self.debug_step % 60 == 0:
-                print(f"[AI] Action: {action} -> Steer: {steering:.2f}, Gas: {throttle:.2f}")
+                print(f"[AI] Action → Steer: {steering:+.2f}, Throttle: {throttle:+.2f} | Obs: {final_obs.shape}")
 
             self.car.set_input(throttle, steering, False)
 
         except Exception as e:
             if self.debug_step % 60 == 0:
                 print(f"[ERROR] Prediction failed: {e}")
-                print(f"[DEBUG] Input Shape was: {final_obs.shape if hasattr(final_obs, 'shape') else 'Unknown'}")
+                print(f"   Obs shape sent: {final_obs.shape if hasattr(final_obs, 'shape') else type(final_obs)}")
+                print(f"   Model expected: {getattr(self.model.observation_space, 'shape', 'Unknown')}")
