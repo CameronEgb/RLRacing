@@ -20,11 +20,11 @@ def handle_transition(game, dt):
     if game.state == "arcade_transition":
         title = FONT_TITLE.render("Next Race Starting Soon...", True, (245,245,245))
         winner_line = f"Last race: {game.arcade.last_race_winner if hasattr(game.arcade, 'last_race_winner') else '??'} wins!"
-        score_line = f"Score → Player: {game.arcade.player_wins}  AI: {game.arcade.ai_wins}"
+        score_line = f"Score → P1: {game.arcade.player_wins}  P2: {game.arcade.ai_wins}"
     else:  # gp_transition
         title = FONT_TITLE.render(f"Race {game.grand_prix.race_index} Complete!", True, (245,245,245))
         winner_line = f"Winner: {game.grand_prix.last_race_winner}"
-        score_line = f"Standings → Player: {game.grand_prix.player_wins}  AI: {game.grand_prix.ai_wins}"
+        score_line = f"Standings → P1: {game.grand_prix.player_wins}  P2: {game.grand_prix.ai_wins}"
 
     screen.blit(title, title.get_rect(center=(SCREEN_WIDTH//2, rect.top + 40)))
     screen.blit(FONT_SMALL.render(winner_line, True, (230,230,230)),
