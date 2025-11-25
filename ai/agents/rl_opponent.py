@@ -13,7 +13,7 @@ except ImportError:
     print("Warning: stable_baselines3 not installed.")
 
 class RLAIOpponent:
-    def __init__(self, car, model_path, obs_type="VISION", debug=True):
+    def __init__(self, car, model_path, obs_type="VISION", debug=False):
         self.car = car
         self.model = None
         self.debug = debug

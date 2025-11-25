@@ -7,7 +7,7 @@ class AIOppSession:
         self.track_file = None
         self.track_name = None
         self.model_path = None
-        self.obs_type = "LEGACY" # Default fallback for old models
+        self.obs_type = "VISION" # Default fallback
         self.winner = None
     
     def start(self, track_filename):
@@ -25,22 +25,21 @@ class AIOppSession:
         # ---------------------------------------------------------
         # INTELLIGENT MODEL SEARCH
         # ---------------------------------------------------------
-        # Priority Order:
-        # 1. NUMERIC (The new Fast PoC)
-        # 2. VISION (The new High Contrast)
-        # 3. LEGACY (Your original unoptimized Vision)
-        # 4. DEFAULT (If folder has no suffix, assume it's the original/Legacy)
+        # We check for models in this priority order:
+        # 1. NUMERIC (Fastest, newest PoC)
+        # 2. VISION (High contrast CNN)
+        # 3. LEGACY (Old folder structure)
         
         candidates = [
             (f"{self.track_name}_NUMERIC", "NUMERIC"),
             (f"{self.track_name}_VISION", "VISION"),
-            (f"{self.track_name}_LEGACY", "LEGACY"),
-            (f"{self.track_name}", "LEGACY") # Fallback to Legacy for un-suffixed folders
+            (f"{self.track_name}", "VISION") # Assume legacy folder is Vision
         ]
 
         found = False
         for folder_name, detected_type in candidates:
             # We look for the 'best_model.zip' created by EvalCallback
+            # path: models/{track_name}_{TYPE}/best_model/best_model.zip
             potential_path = os.path.join(MODELS_DIR, folder_name, "best_model/best_model.zip")
             
             if os.path.exists(potential_path):
@@ -52,8 +51,7 @@ class AIOppSession:
         
         if not found:
             self.model_path = None
-            # If nothing found, defaults to LEGACY so random agent doesn't crash
-            self.obs_type = "LEGACY" 
+            self.obs_type = "VISION" # Default to numeric if random fallback
             print(f"[AI Mode] No trained model found for {self.track_name}. Falling back to Random AI.")
 
     def record_win(self, winner):

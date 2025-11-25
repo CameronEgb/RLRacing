@@ -1,11 +1,38 @@
 # states/menu_state.py
 import pygame
+import os  # <-- critical for os.listdir and os.path
 from ui.button import Button
 from config import *
-from game.track_storer import load_track 
+from game.track_storer import load_track
+
+
+# ──────────────────────────────────────────────────────────────
+# CUSTOM DISPLAY NAMES – edit these exactly how you want them shown!
+# If a track isn't listed here, it will auto-generate a pretty name.
+# ──────────────────────────────────────────────────────────────
+DISPLAY_NAMES = {
+    "Disc-NR-Long.json":                "1 - First Try: Discrete CNN",
+    "Cont-NR-Long.json":                "2 - Second Try: Continuous CNN",
+    "Cont-Lidar-R2.json":               "3 - Third Try: Continuous Lidar",
+    "CLEAR-W60-C8.json":                "4 - Easy Track",
+    "Final-W70-C16.json":               "5 - Medium Track",
+    "RAIN-W70-C16.json":                "7 - Rainy Medium Track",
+    "Final-W80-C24.json":               "6 - Hard - Reverse! Reverse!",
+    "CLEAR-W80-C24.json":               "9 - ",
+    "CLEAR-W70-C24.json":               "8 - Wall Rider",
+    # Add new tracks here anytime – old ones stay safe!
+}
+
+# Fallback: makes "Some_Weird-File_Name.json" → "Some Weird File Name"
+def pretty_filename(fname):
+    name = os.path.splitext(fname)[0]
+    name = name.replace("-", " ").replace("_", " ")
+    return " ".join(word.capitalize() for word in name.split())
+
 
 def create_button(rect, text, action=None):
     return Button(rect, text, FONT_BTN, action)
+
 
 def handle_menu(game, dt):
     screen = game.screen
@@ -43,20 +70,16 @@ def handle_menu(game, dt):
             game.menu_substate = "ai_opp_select"
             game.pending["mode"] = "AI_OPP"
 
-        # Main Mode Buttons
         buttons.append(create_button((cx-150, 300, 300, 50), "Arcade Mode", go_arcade))
         buttons.append(create_button((cx-150, 370, 300, 50), "Grand Prix", go_gp))
-        # New Button
         buttons.append(create_button((cx-150, 440, 300, 50), "AI Battle (RL)", go_ai_opp))
-        
         buttons.append(create_button((cx-150, 550, 300, 50), "Quit", lambda: setattr(game, 'running', False)))
 
-    # --- AI TRACK SELECTION ---
+    # --- AI TRACK SELECTION (AUTO-SORTED BY DISPLAY NUMBER) ---
     elif game.menu_substate == "ai_opp_select":
         title = FONT_TITLE.render("Select Track for AI Battle", True, (240, 240, 240))
         screen.blit(title, title.get_rect(center=(cx, 100)))
         
-        # List JSON files in tracks/
         try:
             track_files = [f for f in os.listdir(TRACKS_DIR) if f.endswith(".json")]
         except FileNotFoundError:
@@ -66,21 +89,38 @@ def handle_menu(game, dt):
             msg = FONT_SMALL.render("No tracks found in /tracks/", True, (255, 100, 100))
             screen.blit(msg, msg.get_rect(center=(cx, 300)))
         else:
+            # Build a list of (display_text, filename) and sort by the number in the text
+            track_items = []
+            for filename in track_files:
+                display_text = DISPLAY_NAMES.get(filename, pretty_filename(filename))
+                track_items.append((display_text, filename))
+
+            # Sort by the leading number (e.g. "1 - ", "2 - ", "10 - " etc.)
+            def sort_key(item):
+                text = item[0]
+                # Find the first sequence of digits at the start (after optional spaces)
+                import re
+                match = re.search(r'^\s*(\d+)', text)
+                return int(match.group(1)) if match else 9999  # unknown → goes to the end
+
+            track_items.sort(key=sort_key)
+
+            # Now create the buttons in perfect order
             start_y = 180
-            for i, filename in enumerate(track_files):
-                name = os.path.splitext(filename)[0]
-                
-                def make_selector(fname):
+            spacing = 68
+            for i, (display_text, filename) in enumerate(track_items):
+                def make_selector(fname=filename):
                     return lambda: start_ai_race(game, fname)
                 
                 buttons.append(create_button(
-                    (cx-200, start_y + i*60, 400, 50), 
-                    f"{name} (Best Model)", 
-                    make_selector(filename)
+                    (cx-280, start_y + i*spacing, 560, 58),
+                    display_text,
+                    make_selector()
                 ))
 
-        buttons.append(create_button((cx-100, 700, 200, 50), "Back", lambda: setattr(game, 'menu_substate', 'root')))
+        buttons.append(create_button((cx-100, 720, 200, 50), "Back", lambda: setattr(game, 'menu_substate', 'root')))
 
+    # --- ARCADE MODE ---
     elif game.menu_substate == "arcade":
         title = FONT_TITLE.render("Arcade Mode", True, (240, 240, 240))
         screen.blit(title, title.get_rect(center=(cx, 100)))
@@ -125,6 +165,7 @@ def handle_menu(game, dt):
         for i, (txt, act) in enumerate(actions):
             buttons.append(create_button((cx-170, 200 + i*52, 340, 44), txt, act))
 
+    # --- ARCADE TRACK SETTINGS ---
     elif game.menu_substate == "arcade_track":
         panel = pygame.Surface((720, 400), pygame.SRCALPHA)
         panel.fill((0, 0, 0, 200))
@@ -152,6 +193,7 @@ def handle_menu(game, dt):
             create_button((cx+20, 400, 180, 44), "Back", back),
         ]
 
+    # --- GRAND PRIX ---
     elif game.menu_substate == "grand_prix":
         title = FONT_TITLE.render("Grand Prix", True, (240, 240, 240))
         screen.blit(title, title.get_rect(center=(cx, 100)))
@@ -186,16 +228,18 @@ def handle_menu(game, dt):
                     select_cup(i)
 
         y = 400
-        buttons = [
+        buttons += [
             create_button((cx-150, y, 300, 44), f"Difficulty: {game.pending['difficulty']}", cycle_diff),
             create_button((cx-150, y+54, 300, 44), f"Weather: {game.pending['weather']}", cycle_weather),
             create_button((cx-150, y+108, 300, 44), "Start Grand Prix", start_gp),
             create_button((cx-150, y+162, 300, 44), "Back", back),
         ]
 
+    # Draw all buttons
     for btn in buttons:
         btn.draw(screen, mouse)
 
+    # Event handling
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             return False
@@ -209,12 +253,14 @@ def handle_menu(game, dt):
     pygame.display.flip()
     return True
 
+
 def start_ai_race(game, filename):
-    """Helper to kick off the AI race immediately."""
+    """Start an AI vs Player race on the selected track."""
     game.pending["mode"] = "AI_OPP"
-    game.pending["track_filename"] = filename # Store choice
-    print("FILENAME = " + filename)
-    weather = load_track("./tracks/" + filename)["intended_weather"]
-    if weather is not "CLEAR":
+    game.pending["track_filename"] = filename
+    print("Selected track:", filename)
+    track_data = load_track(os.path.join(TRACKS_DIR, filename))
+    weather = track_data.get("intended_weather", "CLEAR")
+    if weather != "CLEAR":
         game.pending["weather"] = weather
     game.start_race()

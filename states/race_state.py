@@ -2,6 +2,7 @@
 import pygame
 import math
 from config import *
+from ai.reward_recorder import HumanRewardRecorder  # ← NEW
 
 def handle_race(game, dt):
     screen = game.screen
@@ -17,6 +18,22 @@ def handle_race(game, dt):
     game.player_car.set_input(throttle, steering, handbrake)
     game.player_car.update(dt, game.track_data)
 
+    """
+    # === HUMAN + AI REWARD TRACKING ===
+    if not hasattr(game, 'human_reward_recorder'):
+        game.human_reward_recorder = HumanRewardRecorder(game.track_data)
+        game.ai_reward_recorder    = HumanRewardRecorder(game.track_data)   # ← NEW: one extra line
+
+    # Update both
+    human_r = game.human_reward_recorder.update(game.player_car, dt)
+    ai_r    = game.ai_reward_recorder.update(game.ai_car, dt)               # ← uses the AI car
+
+    # Single combined print every ~1 second
+    if game.human_reward_recorder.step_count % 30 == 0:
+        print(f"[REWARDS] Step {game.human_reward_recorder.step_count:4d} | "
+              f"Human {human_r:8.2f} | AI {ai_r:8.2f}")
+    # ===================================
+    """
     if game.ai_opponent:
         game.ai_opponent.update(dt, game_ref=game)
     game.ai_car.update(dt, game.track_data)
@@ -115,7 +132,7 @@ def handle_race(game, dt):
                 game.state = "menu"
                 game.menu_substate = "root"
             if event.key == pygame.K_r:
-                game.start_race(game.settings)  # reset race
+                game.build_world(game.settings)  # reset race
 
     pygame.display.flip()
     return True
